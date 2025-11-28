@@ -1,0 +1,1 @@
+Excelente! Ahora quiero aumentar la jugabilidad. Quiero que crees un primer mundo con 3 niveles. Basa cada nivel en 3 conceptos diferentes: el primero terrestre, el segundo marino y el tercero en una mazmorra. Cuando termines haz un commit en git con un mensaje que explique los cambios y mejoras.
