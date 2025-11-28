@@ -229,7 +229,7 @@ class CombatSystem {
         const php = this.player.hp / this.player.maxHp;
         ctx.fillStyle = GB.m; ctx.fillRect(50, 108, 40, 4); ctx.fillStyle = GB.l; ctx.fillRect(50, 108, 40*php, 4);
         const pep = this.player.energy / this.player.maxEnergy;
-        ctx.fillStyle = GB.m; ctx.fillRect(50, 116, 40, 4); ctx.fillStyle = GB.ll; ctx.fillRect(50, 116, 40*pep, 4);
+        ctx.fillStyle = GB.d; ctx.fillRect(50, 116, 40, 4); ctx.fillStyle = GB.l; ctx.fillRect(50, 116, 40*pep, 4);
         ctx.fillStyle = GB.m; ctx.fillRect(5, 130, 150, 12);
         ctx.fillStyle = GB.ll; ctx.font = '6px monospace'; ctx.fillText(this.message, 8, 138);
         if (this.turn === 'player' && this.messageTimer === 0) {
