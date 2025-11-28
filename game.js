@@ -306,7 +306,20 @@ class Game {
                     }
                 }
             }
+            // Verificar si el jugador llega a la meta
             if (this.player.x >= LEVELS[this.currentLevel].goal) {
+                // En el nivel 3, verificar que el boss esté derrotado
+                if (this.currentLevel === 2) {
+                    const boss = this.enemies.find(e => e.isBoss);
+                    if (boss && boss.alive) {
+                        // Empujar al jugador hacia atrás si intenta pasar sin derrotar al boss
+                        this.player.x = LEVELS[this.currentLevel].goal - 5;
+                        this.player.vx = 0;
+                        return;
+                    }
+                }
+                
+                // Progresión normal
                 if (this.currentLevel < LEVELS.length - 1) {
                     this.currentLevel++;
                     this.loadLevel(this.currentLevel);
