@@ -71,8 +71,37 @@ class Enemy {
 }
 
 class Platform {
-    constructor(x, y, w, h) { Object.assign(this, {x, y, w, h}); }
-    draw(cx) { ctx.fillStyle = GB.m; ctx.fillRect(this.x-cx, this.y, this.w, this.h); }
+    constructor(x, y, w, h, isDark = false) { Object.assign(this, {x, y, w, h, isDark}); }
+    draw(cx) { 
+        // Usar color más claro para nivel oscuro
+        ctx.fillStyle = this.isDark ? GB.l : GB.m; 
+        ctx.fillRect(this.x-cx, this.y, this.w, this.h);
+        // Añadir borde para mayor contraste
+        if (this.isDark) {
+            ctx.fillStyle = GB.ll;
+            ctx.fillRect(this.x-cx, this.y, this.w, 1);
+        }
+    }
+}
+
+class GoalFlag {
+    constructor(x, y) { this.x = x; this.y = y; this.w = 8; this.h = 20; this.animFrame = 0; }
+    update() { this.animFrame = (this.animFrame + 1) % 60; }
+    draw(cx) {
+        // Poste
+        ctx.fillStyle = GB.d;
+        ctx.fillRect(this.x-cx, this.y, 2, this.h);
+        // Bandera animada
+        const wave = Math.sin(this.animFrame * 0.1) * 2;
+        ctx.fillStyle = GB.l;
+        ctx.fillRect(this.x-cx+2, this.y+wave, 6, 8);
+        ctx.fillStyle = GB.ll;
+        ctx.fillRect(this.x-cx+2, this.y+wave, 6, 4);
+        // Texto META
+        ctx.fillStyle = GB.d;
+        ctx.font = '6px monospace';
+        ctx.fillText('META', this.x-cx-5, this.y-3);
+    }
 }
 
 class CombatSystem {
@@ -163,13 +192,15 @@ class Game {
     constructor() {
         this.player = new Player(20, 100); this.currentLevel = 0; this.platforms = []; this.enemies = [];
         this.combat = null; this.keys = {}; this.cameraX = 0; this.gameStarted = false;
-        this.levelUpMessage = 0; this.levelCompleteMessage = 0;
+        this.levelUpMessage = 0; this.levelCompleteMessage = 0; this.goalFlag = null;
         this.loadLevel(0); this.setupInput();
     }
     loadLevel(lvl) {
         this.currentLevel = lvl; const level = LEVELS[lvl];
-        this.platforms = level.platforms.map(p => new Platform(...p));
+        const isDark = lvl === 2; // Nivel 3 (Mazmorra) es oscuro
+        this.platforms = level.platforms.map(p => new Platform(...p, isDark));
         this.enemies = level.enemies.map(e => new Enemy(...e));
+        this.goalFlag = new GoalFlag(level.goal, 115);
         this.player.x = 20; this.player.y = 100; this.player.energy = this.player.maxEnergy; this.cameraX = 0;
     }
     setupInput() {
@@ -225,6 +256,7 @@ class Game {
                     this.loadLevel(0);
                 }
             }
+            if (this.goalFlag) this.goalFlag.update();
             if (this.levelUpMessage > 0) this.levelUpMessage--;
             if (this.levelCompleteMessage > 0) this.levelCompleteMessage--;
         }
@@ -236,6 +268,7 @@ class Game {
             this.combat.draw();
         } else {
             for (let platform of this.platforms) platform.draw(this.cameraX);
+            if (this.goalFlag) this.goalFlag.draw(this.cameraX);
             for (let enemy of this.enemies) enemy.draw(this.cameraX);
             this.player.draw(this.cameraX);
             ctx.fillStyle = GB.d; ctx.fillRect(0, 0, 160, 12);
