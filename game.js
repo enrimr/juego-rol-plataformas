@@ -77,8 +77,10 @@ class Enemy {
         this.vy += this.gravity;
         this.y += this.vy;
         
-        // Colisión con plataformas
+        // Colisión con plataformas y detección de bordes
         this.onGround = false;
+        let currentPlatform = null;
+        
         for (let platform of platforms) {
             if (this.x < platform.x + platform.w && this.x + this.w > platform.x &&
                 this.y < platform.y + platform.h && this.y + this.h > platform.y) {
@@ -86,7 +88,21 @@ class Enemy {
                     this.y = platform.y - this.h;
                     this.vy = 0;
                     this.onGround = true;
+                    currentPlatform = platform;
                 }
+            }
+        }
+        
+        // Detectar borde de plataforma y cambiar dirección (solo para enemigos que no saltan)
+        if (this.onGround && currentPlatform && !this.canJump) {
+            const edgeMargin = 3;
+            // Borde derecho
+            if (this.vx > 0 && this.x + this.w >= currentPlatform.x + currentPlatform.w - edgeMargin) {
+                this.vx = -this.vx;
+            }
+            // Borde izquierdo
+            if (this.vx < 0 && this.x <= currentPlatform.x + edgeMargin) {
+                this.vx = -this.vx;
             }
         }
         
