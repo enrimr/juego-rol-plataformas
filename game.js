@@ -44,15 +44,61 @@ class Player {
 
 class Enemy {
     constructor(x, y, type) {
-        this.x = x; this.y = y; this.type = type; this.alive = true; this.defeated = false;
+        this.x = x; this.y = y; this.initialX = x; this.type = type; this.alive = true; this.defeated = false;
         const stats = {
-            slime: [1,8,3,1,5,GB.l], beetle: [2,12,4,2,8,GB.m], goblin: [3,18,6,3,15,GB.d],
-            jellyfish: [3,15,5,2,12,GB.l], crab: [4,20,7,4,18,GB.m], seahorse: [5,25,9,4,25,GB.d],
-            bat: [5,22,8,3,20,GB.d], skeleton: [6,30,11,5,30,GB.m], dragon: [8,50,15,8,50,GB.d,true]
+            slime: [1,8,3,1,5,GB.l,0.3,false,30], 
+            beetle: [2,12,4,2,8,GB.m,0.5,false,40], 
+            goblin: [3,18,6,3,15,GB.d,0.7,true,50],
+            jellyfish: [3,15,5,2,12,GB.l,0.4,false,35], 
+            crab: [4,20,7,4,18,GB.m,0.6,false,45], 
+            seahorse: [5,25,9,4,25,GB.d,0.8,true,55],
+            bat: [5,22,8,3,20,GB.d,1.0,true,40], 
+            skeleton: [6,30,11,5,30,GB.m,0.5,false,50], 
+            dragon: [8,50,15,8,50,GB.d,0,false,0,true]
         };
         const s = stats[type];
-        [this.level, this.maxHp, this.attack, this.defense, this.xpReward, this.color, this.isBoss] = s;
+        [this.level, this.maxHp, this.attack, this.defense, this.xpReward, this.color, this.speed, this.canJump, this.moveRange, this.isBoss] = s;
         this.hp = this.maxHp; this.w = this.isBoss ? 16 : 10; this.h = this.isBoss ? 16 : 10;
+        this.vx = this.speed; this.vy = 0; this.gravity = 0.3; this.onGround = false;
+        this.jumpTimer = 0; this.jumpCooldown = 120 + Math.random() * 60;
+    }
+    update(platforms) {
+        if (!this.alive || this.isBoss) return;
+        
+        // Movimiento horizontal patrulla
+        if (this.speed > 0) {
+            this.x += this.vx;
+            if (Math.abs(this.x - this.initialX) > this.moveRange) {
+                this.vx = -this.vx;
+            }
+        }
+        
+        // Gravedad
+        this.vy += this.gravity;
+        this.y += this.vy;
+        
+        // Colisión con plataformas
+        this.onGround = false;
+        for (let platform of platforms) {
+            if (this.x < platform.x + platform.w && this.x + this.w > platform.x &&
+                this.y < platform.y + platform.h && this.y + this.h > platform.y) {
+                if (this.vy > 0 && this.y + this.h <= platform.y + 10) {
+                    this.y = platform.y - this.h;
+                    this.vy = 0;
+                    this.onGround = true;
+                }
+            }
+        }
+        
+        // Salto aleatorio para enemigos que pueden saltar
+        if (this.canJump && this.onGround) {
+            this.jumpTimer++;
+            if (this.jumpTimer >= this.jumpCooldown) {
+                this.vy = -3.5;
+                this.jumpTimer = 0;
+                this.jumpCooldown = 120 + Math.random() * 60;
+            }
+        }
     }
     takeDamage(amt) {
         const dmg = Math.max(1, amt - this.defense); this.hp -= dmg;
@@ -233,6 +279,7 @@ class Game {
             this.cameraX = Math.max(0, Math.min(this.player.x - 80, LEVELS[this.currentLevel].goal - 160));
             for (let enemy of this.enemies) {
                 if (!enemy.alive) continue;
+                enemy.update(this.platforms);
                 if (this.player.collides(enemy)) {
                     if (this.player.collidesFromAbove(enemy) && enemy.level < this.player.level) {
                         enemy.alive = false; enemy.defeated = true;
