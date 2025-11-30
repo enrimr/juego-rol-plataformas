@@ -261,6 +261,159 @@ class CombatSystem {
     }
 }
 
+// Clase para los nodos del mapa del mundo
+class LevelNode {
+    constructor(x, y, levelIndex, name) {
+        this.x = x; this.y = y; this.levelIndex = levelIndex; this.name = name;
+        this.completed = false; this.unlocked = levelIndex === 0;
+        this.w = 12; this.h = 12; this.animFrame = 0;
+    }
+    update() { this.animFrame = (this.animFrame + 1) % 120; }
+    draw() {
+        // Fondo del nodo
+        ctx.fillStyle = this.completed ? GB.l : this.unlocked ? GB.ll : GB.m;
+        ctx.fillRect(this.x - this.w/2, this.y - this.h/2, this.w, this.h);
+        
+        // Borde
+        ctx.fillStyle = GB.d;
+        ctx.fillRect(this.x - this.w/2, this.y - this.h/2, this.w, 1);
+        ctx.fillRect(this.x - this.w/2, this.y + this.h/2 - 1, this.w, 1);
+        ctx.fillRect(this.x - this.w/2, this.y - this.h/2, 1, this.h);
+        ctx.fillRect(this.x + this.w/2 - 1, this.y - this.h/2, 1, this.h);
+        
+        // Número del nivel
+        ctx.fillStyle = GB.d;
+        ctx.font = '8px monospace';
+        ctx.fillText((this.levelIndex + 1).toString(), this.x - 3, this.y + 3);
+        
+        // Indicador de completado
+        if (this.completed) {
+            ctx.fillStyle = GB.d;
+            ctx.fillRect(this.x + 3, this.y - 5, 2, 4);
+            ctx.fillRect(this.x + 5, this.y - 3, 2, 2);
+        }
+        
+        // Animación si está desbloqueado pero no completado
+        if (this.unlocked && !this.completed && this.animFrame < 60) {
+            ctx.fillStyle = GB.d;
+            ctx.fillRect(this.x - this.w/2 - 1, this.y - this.h/2 - 1, this.w + 2, 1);
+            ctx.fillRect(this.x - this.w/2 - 1, this.y + this.h/2, this.w + 2, 1);
+            ctx.fillRect(this.x - this.w/2 - 1, this.y - this.h/2 - 1, 1, this.h + 2);
+            ctx.fillRect(this.x + this.w/2, this.y - this.h/2 - 1, 1, this.h + 2);
+        }
+    }
+}
+
+// Clase para el mapa del mundo
+class WorldMap {
+    constructor() {
+        this.nodes = [
+            // Mundo 1
+            new LevelNode(30, 100, 0, 'Bosque'),
+            new LevelNode(70, 80, 1, 'Costa'),
+            new LevelNode(110, 90, 2, 'Mazmorra'),
+            // Mundo 2
+            new LevelNode(30, 50, 3, 'Cañón'),
+            new LevelNode(80, 35, 4, 'Tormenta'),
+            new LevelNode(130, 45, 5, 'Fortaleza')
+        ];
+        this.currentNodeIndex = 0;
+        this.paths = [[0,1], [1,2], [2,3], [3,4], [4,5]]; // Conexiones entre niveles
+    }
+    
+    update(keys) {
+        const node = this.nodes[this.currentNodeIndex];
+        
+        // Navegar entre nodos
+        if (keys.ArrowRight || keys.KeyD) {
+            if (this.currentNodeIndex < this.nodes.length - 1 && 
+                this.nodes[this.currentNodeIndex + 1].unlocked) {
+                this.currentNodeIndex++;
+                keys.ArrowRight = false;
+                keys.KeyD = false;
+            }
+        }
+        if (keys.ArrowLeft || keys.KeyA) {
+            if (this.currentNodeIndex > 0) {
+                this.currentNodeIndex--;
+                keys.ArrowLeft = false;
+                keys.KeyA = false;
+            }
+        }
+        
+        this.nodes.forEach(n => n.update());
+        
+        // Devolver el nivel seleccionado si se presiona Enter o Space
+        if (keys.Space || keys.Enter) {
+            if (node.unlocked) {
+                keys.Space = false;
+                keys.Enter = false;
+                return node.levelIndex;
+            }
+        }
+        return null;
+    }
+    
+    draw() {
+        ctx.fillStyle = GB.ll;
+        ctx.fillRect(0, 0, 160, 144);
+        
+        // Dibujar título
+        ctx.fillStyle = GB.d;
+        ctx.font = '8px monospace';
+        ctx.fillText('MAPA DEL MUNDO', 40, 12);
+        
+        // Dibujar caminos
+        ctx.fillStyle = GB.m;
+        this.paths.forEach(([from, to]) => {
+            const n1 = this.nodes[from];
+            const n2 = this.nodes[to];
+            const dx = n2.x - n1.x;
+            const dy = n2.y - n1.y;
+            const len = Math.sqrt(dx*dx + dy*dy);
+            const steps = Math.floor(len / 3);
+            for (let i = 0; i <= steps; i++) {
+                const t = i / steps;
+                const x = n1.x + dx * t;
+                const y = n1.y + dy * t;
+                ctx.fillRect(x - 1, y - 1, 2, 2);
+            }
+        });
+        
+        // Dibujar nodos
+        this.nodes.forEach(node => node.draw());
+        
+        // Dibujar jugador en el nodo actual
+        const currentNode = this.nodes[this.currentNodeIndex];
+        ctx.fillStyle = GB.d;
+        ctx.fillRect(currentNode.x - 3, currentNode.y + 10, 6, 8);
+        ctx.fillStyle = GB.ll;
+        ctx.fillRect(currentNode.x - 2, currentNode.y + 12, 1, 1);
+        ctx.fillRect(currentNode.x + 1, currentNode.y + 12, 1, 1);
+        
+        // Instrucciones
+        ctx.fillStyle = GB.d;
+        ctx.font = '6px monospace';
+        ctx.fillText('< >: Navegar', 5, 135);
+        ctx.fillText('SPACE: Entrar', 90, 135);
+        
+        // Info del nivel actual
+        ctx.fillStyle = GB.m;
+        ctx.fillRect(5, 18, 150, 12);
+        ctx.fillStyle = GB.ll;
+        ctx.font = '6px monospace';
+        const levelName = LEVELS[currentNode.levelIndex].name;
+        ctx.fillText(`Nivel ${currentNode.levelIndex + 1}: ${levelName}`, 8, 26);
+    }
+    
+    completeLevel(levelIndex) {
+        this.nodes[levelIndex].completed = true;
+        if (levelIndex < this.nodes.length - 1) {
+            this.nodes[levelIndex + 1].unlocked = true;
+        }
+    }
+}
+
 const LEVELS = [
     // Mundo 1: Terrestre
     { name: 'Bosque Terrestre', bg: GB.ll, world: 1,
@@ -293,7 +446,8 @@ class Game {
         this.player = new Player(20, 100); this.currentLevel = 0; this.platforms = []; this.enemies = [];
         this.combat = null; this.keys = {}; this.cameraX = 0; this.gameStarted = false;
         this.levelUpMessage = 0; this.levelCompleteMessage = 0; this.goalFlag = null;
-        this.loadLevel(0); this.setupInput();
+        this.worldMap = new WorldMap(); this.inWorldMap = false; this.inLevel = false;
+        this.setupInput();
     }
     loadLevel(lvl) {
         this.currentLevel = lvl; const level = LEVELS[lvl];
@@ -312,13 +466,41 @@ class Game {
     setupInput() {
         document.addEventListener('keydown', (e) => {
             this.keys[e.code] = true;
-            if (!this.gameStarted && e.code === 'Space') { this.gameStarted = true; startScreen.style.display = 'none'; }
+            if (!this.gameStarted && e.code === 'Space') { 
+                this.gameStarted = true; 
+                startScreen.style.display = 'none'; 
+                this.inWorldMap = true;
+            }
             if (this.combat && this.combat.active) this.combat.handleInput(e.code);
+            // Salir del nivel con ESC
+            if (e.code === 'Escape' && this.inLevel && !this.combat) {
+                this.exitLevel();
+            }
         });
         document.addEventListener('keyup', (e) => { this.keys[e.code] = false; });
     }
+    
+    exitLevel() {
+        this.inLevel = false;
+        this.inWorldMap = true;
+        this.player.hp = this.player.maxHp;
+        this.player.energy = this.player.maxEnergy;
+    }
     update() {
         if (!this.gameStarted) return;
+        
+        // Actualizar mapa del mundo
+        if (this.inWorldMap) {
+            const selectedLevel = this.worldMap.update(this.keys);
+            if (selectedLevel !== null) {
+                this.currentLevel = selectedLevel;
+                this.loadLevel(selectedLevel);
+                this.inWorldMap = false;
+                this.inLevel = true;
+            }
+            return;
+        }
+        
         if (this.combat) {
             this.combat.update();
             if (!this.combat.active) {
@@ -363,17 +545,28 @@ class Game {
                     }
                 }
                 
-                // Progresión normal
-                if (this.currentLevel < LEVELS.length - 1) {
-                    this.currentLevel++;
-                    this.loadLevel(this.currentLevel);
-                    this.levelCompleteMessage = 180;
-                } else {
+                // Marcar nivel como completado y volver al mapa
+                this.worldMap.completeLevel(this.currentLevel);
+                this.levelCompleteMessage = 180;
+                
+                if (this.currentLevel === LEVELS.length - 1) {
+                    // Último nivel completado - Victoria
                     this.gameStarted = false;
                     startScreen.innerHTML = '<h1>VICTORIA!</h1><p>¡Completaste los 6 niveles!</p><p>¡Venciste 2 mundos!</p><p class="blink">PRESIONA ESPACIO</p>';
                     startScreen.style.display = 'flex';
                     this.player = new Player(20, 100);
-                    this.loadLevel(0);
+                    this.worldMap = new WorldMap();
+                    this.inLevel = false;
+                    this.inWorldMap = false;
+                } else {
+                    // Volver al mapa del mundo
+                    setTimeout(() => {
+                        this.inLevel = false;
+                        this.inWorldMap = true;
+                        this.worldMap.currentNodeIndex = Math.min(this.currentLevel + 1, LEVELS.length - 1);
+                        this.player.hp = this.player.maxHp;
+                        this.player.energy = this.player.maxEnergy;
+                    }, 2000);
                 }
             }
             if (this.goalFlag) this.goalFlag.update();
@@ -382,6 +575,12 @@ class Game {
         }
     }
     draw() {
+        // Dibujar mapa del mundo
+        if (this.inWorldMap) {
+            this.worldMap.draw();
+            return;
+        }
+        
         ctx.fillStyle = LEVELS[this.currentLevel].bg;
         ctx.fillRect(0, 0, 160, 144);
         if (this.combat) {
