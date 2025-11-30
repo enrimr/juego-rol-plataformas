@@ -54,16 +54,33 @@ class Enemy {
             seahorse: [5,25,9,4,25,GB.d,0.8,true,55],
             bat: [5,22,8,3,20,GB.d,1.0,true,40], 
             skeleton: [6,30,11,5,30,GB.m,0.5,false,50], 
-            dragon: [8,50,15,8,50,GB.d,0,false,0,true]
+            dragon: [8,50,15,8,50,GB.d,0,false,0,true],
+            hawk: [4,18,7,2,14,GB.m,0.8,false,50,false,true],
+            spider: [5,24,9,3,18,GB.d,0.6,true,45],
+            scorpion: [6,28,11,5,22,GB.m,0.5,false,40],
+            gargoyle: [7,35,13,6,28,GB.d,1.0,false,60,false,true],
+            demon: [9,60,18,10,60,GB.d,0,false,0,true]
         };
         const s = stats[type];
-        [this.level, this.maxHp, this.attack, this.defense, this.xpReward, this.color, this.speed, this.canJump, this.moveRange, this.isBoss] = s;
+        [this.level, this.maxHp, this.attack, this.defense, this.xpReward, this.color, this.speed, this.canJump, this.moveRange, this.isBoss, this.isFlying] = s;
         this.hp = this.maxHp; this.w = this.isBoss ? 16 : 10; this.h = this.isBoss ? 16 : 10;
-        this.vx = this.speed; this.vy = 0; this.gravity = 0.3; this.onGround = false;
+        this.vx = this.speed; this.vy = 0; this.gravity = this.isFlying ? 0 : 0.3; this.onGround = false;
         this.jumpTimer = 0; this.jumpCooldown = 120 + Math.random() * 60;
+        this.flyTimer = 0; this.flyAmplitude = 15;
     }
     update(platforms) {
         if (!this.alive || this.isBoss) return;
+        
+        // Enemigos voladores
+        if (this.isFlying) {
+            this.flyTimer++;
+            this.x += this.vx;
+            if (Math.abs(this.x - this.initialX) > this.moveRange) {
+                this.vx = -this.vx;
+            }
+            this.y = this.initialY + Math.sin(this.flyTimer * 0.05) * this.flyAmplitude;
+            return;
+        }
         
         // Movimiento horizontal patrulla
         if (this.speed > 0) {
@@ -127,6 +144,12 @@ class Enemy {
         ctx.fillStyle = GB.ll;
         const es = this.isBoss ? 3 : 2, eo = this.isBoss ? 4 : 2;
         ctx.fillRect(this.x-cx+eo, this.y+3, es, es); ctx.fillRect(this.x-cx+this.w-eo-es, this.y+3, es, es);
+        // Indicador de vuelo
+        if (this.isFlying) {
+            ctx.fillStyle = GB.ll;
+            ctx.fillRect(this.x-cx-2, this.y+this.h/2, 2, 1);
+            ctx.fillRect(this.x-cx+this.w, this.y+this.h/2, 2, 1);
+        }
         ctx.fillStyle = GB.d; ctx.font = '6px monospace'; ctx.fillText(`L${this.level}`, this.x-cx, this.y-2);
         if (this.isBoss) ctx.fillText('BOSS', this.x-cx, this.y-10);
     }
@@ -239,15 +262,30 @@ class CombatSystem {
 }
 
 const LEVELS = [
-    { name: 'Bosque Terrestre', bg: GB.ll,
+    // Mundo 1: Terrestre
+    { name: 'Bosque Terrestre', bg: GB.ll, world: 1,
       platforms: [[0,135,400,10], [50,110,40,5], [120,95,50,5], [200,80,40,5], [280,65,50,5]],
       enemies: [[80,125,'slime'], [140,85,'beetle'], [220,70,'goblin'], [300,55,'beetle']], goal: 380 },
-    { name: 'Costa Marina', bg: GB.l,
+    { name: 'Costa Marina', bg: GB.l, world: 1,
       platforms: [[0,135,400,10], [40,115,35,5], [100,100,40,5], [170,85,45,5], [240,70,40,5], [310,55,50,5]],
       enemies: [[70,105,'jellyfish'], [150,75,'crab'], [260,60,'seahorse'], [330,45,'jellyfish']], goal: 380 },
-    { name: 'Mazmorra Oscura', bg: GB.m,
+    { name: 'Mazmorra Oscura', bg: GB.m, world: 1,
       platforms: [[0,135,450,10], [60,115,40,5], [130,100,45,5], [205,85,40,5], [280,70,50,5], [360,85,50,5]],
-      enemies: [[90,105,'bat'], [160,90,'skeleton'], [300,60,'bat'], [380,75,'dragon']], goal: 440 }
+      enemies: [[90,105,'bat'], [160,90,'skeleton'], [300,60,'bat'], [380,75,'dragon']], goal: 440 },
+    
+    // Mundo 2: Avanzado (mapas más largos, precipicios, enemigos voladores)
+    { name: 'Cañón Peligroso', bg: GB.ll, world: 2,
+      platforms: [[0,135,80,10], [120,135,60,10], [220,120,50,5], [310,105,55,5], [405,90,60,5], [505,105,50,5], [595,120,70,10]],
+      enemies: [[140,125,'spider'], [250,110,'hawk',45], [350,95,'scorpion'], [450,50,'hawk',60], [550,95,'spider'], [615,110,'goblin']], 
+      goal: 650 },
+    { name: 'Tormenta Aérea', bg: GB.l, world: 2,
+      platforms: [[0,135,70,10], [100,120,45,5], [175,105,50,5], [255,90,45,5], [330,75,50,5], [410,90,55,5], [495,105,50,5], [575,120,45,5], [650,135,70,10]],
+      enemies: [[120,110,'gargoyle',70], [200,95,'hawk',55], [280,80,'scorpion'], [380,60,'gargoyle',75], [450,85,'spider'], [520,95,'hawk',60], [600,110,'seahorse']], 
+      goal: 705 },
+    { name: 'Fortaleza Infernal', bg: GB.m, world: 2,
+      platforms: [[0,135,90,10], [130,120,55,5], [220,105,50,5], [305,90,55,5], [395,75,50,5], [480,60,55,5], [570,75,50,5], [655,90,60,5], [750,105,70,10]],
+      enemies: [[150,110,'bat'], [240,95,'gargoyle',65], [330,80,'skeleton'], [420,65,'hawk',70], [510,50,'scorpion'], [600,65,'bat'], [690,80,'gargoyle',75], [770,95,'demon']], 
+      goal: 805 }
 ];
 
 class Game {
@@ -259,9 +297,15 @@ class Game {
     }
     loadLevel(lvl) {
         this.currentLevel = lvl; const level = LEVELS[lvl];
-        const isDark = lvl === 2; // Nivel 3 (Mazmorra) es oscuro
+        const isDark = level.world === 1 && lvl === 2 || level.world === 2 && lvl === 5;
         this.platforms = level.platforms.map(p => new Platform(...p, isDark));
-        this.enemies = level.enemies.map(e => new Enemy(...e));
+        this.enemies = level.enemies.map(e => {
+            const enemy = new Enemy(...e);
+            if (enemy.isFlying) {
+                enemy.initialY = enemy.y;
+            }
+            return enemy;
+        });
         this.goalFlag = new GoalFlag(level.goal, 115);
         this.player.x = 20; this.player.y = 100; this.player.energy = this.player.maxEnergy; this.cameraX = 0;
     }
@@ -308,8 +352,8 @@ class Game {
             }
             // Verificar si el jugador llega a la meta
             if (this.player.x >= LEVELS[this.currentLevel].goal) {
-                // En el nivel 3, verificar que el boss esté derrotado
-                if (this.currentLevel === 2) {
+                // En niveles con boss (nivel 3 y 6), verificar que el boss esté derrotado
+                if (this.currentLevel === 2 || this.currentLevel === 5) {
                     const boss = this.enemies.find(e => e.isBoss);
                     if (boss && boss.alive) {
                         // Empujar al jugador hacia atrás si intenta pasar sin derrotar al boss
@@ -326,7 +370,7 @@ class Game {
                     this.levelCompleteMessage = 180;
                 } else {
                     this.gameStarted = false;
-                    startScreen.innerHTML = '<h1>VICTORIA!</h1><p>Completaste los 3 niveles!</p><p class="blink">PRESIONA ESPACIO</p>';
+                    startScreen.innerHTML = '<h1>VICTORIA!</h1><p>¡Completaste los 6 niveles!</p><p>¡Venciste 2 mundos!</p><p class="blink">PRESIONA ESPACIO</p>';
                     startScreen.style.display = 'flex';
                     this.player = new Player(20, 100);
                     this.loadLevel(0);
