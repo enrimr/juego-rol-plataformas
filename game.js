@@ -453,10 +453,18 @@ class Game {
         this.currentLevel = lvl; const level = LEVELS[lvl];
         const isDark = level.world === 1 && lvl === 2 || level.world === 2 && lvl === 5;
         this.platforms = level.platforms.map(p => new Platform(...p, isDark));
+        
+        // Verificar si el nivel ya fue completado
+        const levelCompleted = this.worldMap.nodes[lvl].completed;
+        
         this.enemies = level.enemies.map(e => {
             const enemy = new Enemy(...e);
             if (enemy.isFlying) {
                 enemy.initialY = enemy.y;
+            }
+            // Reducir XP a la mitad si el nivel ya fue completado
+            if (levelCompleted) {
+                enemy.xpReward = Math.floor(enemy.xpReward / 2);
             }
             return enemy;
         });
