@@ -213,7 +213,7 @@ class CombatSystem {
         } else if (action === 2) {
             this.defending = true; this.message = 'Te defiendes...';
         } else if (action === 3) {
-            if (Math.random() > 0.5) { this.message = 'Huiste!'; this.result = 'flee'; this.active = false; return; }
+            if (Math.random() > 0.2) { this.message = 'Huiste!'; this.result = 'flee'; this.active = false; return; }
             else { this.message = 'No pudiste huir!'; }
         }
         this.messageTimer = 60;
