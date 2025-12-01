@@ -447,6 +447,7 @@ class Game {
         this.combat = null; this.keys = {}; this.cameraX = 0; this.gameStarted = false;
         this.levelUpMessage = 0; this.levelCompleteMessage = 0; this.goalFlag = null;
         this.worldMap = new WorldMap(); this.inWorldMap = false; this.inLevel = false;
+        this.levelCompleting = false;
         this.setupInput();
     }
     loadLevel(lvl) {
@@ -525,7 +526,10 @@ class Game {
                 this.combat = null;
             }
         } else {
-            this.player.update(this.keys, this.platforms);
+            // No actualizar jugador si está completando nivel
+            if (!this.levelCompleting) {
+                this.player.update(this.keys, this.platforms);
+            }
             this.cameraX = Math.max(0, Math.min(this.player.x - 80, LEVELS[this.currentLevel].goal - 160));
             for (let enemy of this.enemies) {
                 if (!enemy.alive) continue;
@@ -541,7 +545,7 @@ class Game {
                 }
             }
             // Verificar si el jugador llega a la meta
-            if (this.player.x >= LEVELS[this.currentLevel].goal) {
+            if (this.player.x >= LEVELS[this.currentLevel].goal && !this.levelCompleting) {
                 // En niveles con boss (nivel 3 y 6), verificar que el boss esté derrotado
                 if (this.currentLevel === 2 || this.currentLevel === 5) {
                     const boss = this.enemies.find(e => e.isBoss);
@@ -553,12 +557,14 @@ class Game {
                     }
                 }
                 
-                // Marcar nivel como completado y volver al mapa
+                // Marcar nivel como completado y activar flag de completando
+                this.levelCompleting = true;
                 this.worldMap.completeLevel(this.currentLevel);
                 this.levelCompleteMessage = 180;
                 
                 if (this.currentLevel === LEVELS.length - 1) {
                     // Último nivel completado - Victoria
+                    this.levelCompleting = false;
                     this.gameStarted = false;
                     startScreen.innerHTML = '<h1>VICTORIA!</h1><p>¡Completaste los 6 niveles!</p><p>¡Venciste 2 mundos!</p><p class="blink">PRESIONA ESPACIO</p>';
                     startScreen.style.display = 'flex';
@@ -569,6 +575,7 @@ class Game {
                 } else {
                     // Volver al mapa del mundo
                     setTimeout(() => {
+                        this.levelCompleting = false;
                         this.inLevel = false;
                         this.inWorldMap = true;
                         this.worldMap.currentNodeIndex = Math.min(this.currentLevel + 1, LEVELS.length - 1);
