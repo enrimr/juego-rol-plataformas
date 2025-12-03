@@ -447,7 +447,7 @@ class Game {
         this.combat = null; this.keys = {}; this.cameraX = 0; this.gameStarted = false;
         this.levelUpMessage = 0; this.levelCompleteMessage = 0; this.goalFlag = null;
         this.worldMap = new WorldMap(); this.inWorldMap = false; this.inLevel = false;
-        this.levelCompleting = false;
+        this.levelCompleting = false; this.playerInvulnerable = 0;
         this.setupInput();
     }
     loadLevel(lvl) {
@@ -522,6 +522,9 @@ class Game {
                     startScreen.style.display = 'flex';
                     this.player = new Player(20, 100);
                     this.loadLevel(0);
+                } else if (this.combat.result === 'flee') {
+                    // Al huir, dar invulnerabilidad temporal para evitar re-combate inmediato
+                    this.playerInvulnerable = 180; // 3 segundos a 60 FPS
                 }
                 this.combat = null;
             }
@@ -531,10 +534,17 @@ class Game {
                 this.player.update(this.keys, this.platforms);
             }
             this.cameraX = Math.max(0, Math.min(this.player.x - 80, LEVELS[this.currentLevel].goal - 160));
+            
+            // Reducir contador de invulnerabilidad
+            if (this.playerInvulnerable > 0) {
+                this.playerInvulnerable--;
+            }
+            
             for (let enemy of this.enemies) {
                 if (!enemy.alive) continue;
                 enemy.update(this.platforms);
-                if (this.player.collides(enemy)) {
+                // Solo detectar colisión si el jugador no es invulnerable
+                if (this.player.collides(enemy) && this.playerInvulnerable === 0) {
                     if (this.player.collidesFromAbove(enemy) && enemy.level < this.player.level) {
                         enemy.alive = false; enemy.defeated = true;
                         this.player.gainXP(enemy.xpReward);
@@ -604,7 +614,10 @@ class Game {
             for (let platform of this.platforms) platform.draw(this.cameraX);
             if (this.goalFlag) this.goalFlag.draw(this.cameraX);
             for (let enemy of this.enemies) enemy.draw(this.cameraX);
-            this.player.draw(this.cameraX);
+            // Parpadeo visual si es invulnerable
+            if (this.playerInvulnerable === 0 || Math.floor(this.playerInvulnerable / 10) % 2 === 0) {
+                this.player.draw(this.cameraX);
+            }
             ctx.fillStyle = GB.d; ctx.fillRect(0, 0, 160, 12);
             ctx.fillStyle = GB.ll; ctx.font = '6px monospace';
             ctx.fillText(`Lv${this.player.level}`, 2, 8);
