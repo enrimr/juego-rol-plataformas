@@ -1,0 +1,21 @@
+# Dependencias
+node_modules/
+package-lock.json
+
+# Cobertura de tests
+coverage/
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+npm-debug.log*
